@@ -1,13 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL Shader Feedback</title>
+
+    <title>WebGL Mouse Compression</title>
 
     <style>
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -29,191 +31,711 @@
 <canvas id="gl-canvas"></canvas>
 
 <script>
-const canvas = document.querySelector("#gl-canvas");
-const gl = canvas.getContext("webgl");
+
+// ============================================================
+// CANVAS + WEBGL
+// ============================================================
+
+const canvas =
+    document.querySelector("#gl-canvas");
+
+const gl =
+    canvas.getContext("webgl");
+
 
 if (!gl) {
+
     alert("WebGL not supported!");
-    throw new Error("WebGL not supported");
+
+    throw new Error(
+        "WebGL not supported"
+    );
+
 }
 
 
-// ------------------------------------------------------------
-// Mouse
-// ------------------------------------------------------------
+
+// ============================================================
+// MOUSE
+// ============================================================
 
 const mouse = {
-    x: 0,
-    y: 0,
-    down: 0 // Added mouse down state (0 = up, 1 = down)
+
+    x: window.innerWidth * 0.5,
+
+    y: window.innerHeight * 0.5
+
 };
 
-window.addEventListener("mousemove", (e) => {
-    mouse.x = e.clientX;
-    mouse.y = window.innerHeight - e.clientY;
-});
 
-// Added mouse event listeners
-window.addEventListener("mousedown", () => {
-    mouse.down = 1;
-});
+window.addEventListener(
+    "mousemove",
+    (e) => {
 
-window.addEventListener("mouseup", () => {
-    mouse.down = 0;
-});
+        mouse.x =
+            e.clientX;
 
+        // WebGL Y starts from bottom
+        mouse.y =
+            window.innerHeight
+            -
+            e.clientY;
 
-// ------------------------------------------------------------
-// Resize
-// ------------------------------------------------------------
-
-function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    canvas.width = Math.floor(window.innerWidth * dpr);
-    canvas.height = Math.floor(window.innerHeight * dpr);
-
-    canvas.style.width = window.innerWidth + "px";
-    canvas.style.height = window.innerHeight + "px";
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
-
-    // Recreate the feedback buffers at the new resolution.
-    createFeedbackBuffers();
-}
-
-window.addEventListener("resize", resize);
+    }
+);
 
 
-// ------------------------------------------------------------
-// Vertex shader
-// ------------------------------------------------------------
+
+// ============================================================
+// VERTEX SHADER
+// ============================================================
 
 const vsSource = `
+
 attribute vec2 a_position;
 
 void main() {
-    gl_Position = vec4(a_position, 0.0, 1.0);
+
+    gl_Position =
+        vec4(
+            a_position,
+            0.0,
+            1.0
+        );
+
 }
+
 `;
 
 
-// ------------------------------------------------------------
-// Fragment shader
-// ------------------------------------------------------------
+
+// ============================================================
+// FRAGMENT SHADER
+// ============================================================
 
 const fsSource = `
-//grid follow mouse,responsive 
+
 #ifdef GL_ES
 precision mediump float;
 #endif
 
+
 uniform vec2 u_resolution;
+
 uniform vec2 u_mouse;
+
 uniform float u_time;
+
 uniform sampler2D u_previousFrame;
 
-float rand (in vec2 st) {
-    return fract(sin(dot(st.xy, vec2(u_time*0.001*(12.9898,78.233)))) * log(u_time*0.001));
+uniform float u_display;
+
+
+
+// ============================================================
+// RANDOM
+// ============================================================
+
+float rand(in vec2 st) {
+
+    float t =
+        max(
+            u_time * 0.001,
+            0.001
+        );
+
+
+    return fract(
+
+        sin(
+
+            dot(
+
+                st.xy,
+
+                vec2(
+                    t * 12.9898,
+                    t * 78.233
+                )
+
+            )
+
+        )
+
+        *
+
+        log(t)
+
+    );
+
 }
 
-float noise (in vec2 st) {
-    vec2 i = floor(st);
-    vec2 f = fract(st);
-    float a = rand(i);
-    float b = rand(i + vec2(1.0, 0.0));
-    float c = rand(i + vec2(0.0, 1.0));
-    float d = rand(i + vec2(1.0, 1.0));
-    vec2 u = f*f*(sin(-2.728* u_time) *f);
-    return mix(a, b, u.x) + (c - a) * u.y * (5.136 - u.x) + (d - b) * u.x * u.y;
+
+
+// ============================================================
+// NOISE
+// ============================================================
+
+float noise(in vec2 st) {
+
+    vec2 i =
+        floor(st);
+
+
+    vec2 f =
+        fract(st);
+
+
+    float a =
+        rand(i);
+
+
+    float b =
+        rand(
+            i +
+            vec2(
+                1.0,
+                0.0
+            )
+        );
+
+
+    float c =
+        rand(
+            i +
+            vec2(
+                0.0,
+                1.0
+            )
+        );
+
+
+    float d =
+        rand(
+            i +
+            vec2(
+                1.0,
+                1.0
+            )
+        );
+
+
+
+    vec2 u =
+
+        f
+        *
+        f
+        *
+        (
+            sin(
+                -2.728
+                *
+                u_time
+            )
+            *
+            f
+        );
+
+
+
+    return
+
+        mix(
+            a,
+            b,
+            u.x
+        )
+
+        +
+
+        (c - a)
+        *
+        u.y
+        *
+        (5.136 - u.x)
+
+        +
+
+        (d - b)
+        *
+        u.x
+        *
+        u.y;
+
 }
+
+
+
+// ============================================================
+// SYMMETRIC WARP
+//
+// power < 1
+// = center compressed
+//
+// power = 1
+// = normal spacing
+//
+// power > 1
+// = outer edges compressed
+// ============================================================
+
+float compressAxis(
+    float coord,
+    float power
+) {
+
+    // convert:
+    //
+    // 0 -------- 0.5 -------- 1
+    //
+    // into:
+    //
+    // -1 -------- 0 -------- +1
+
+    float centered =
+        (
+            coord
+            -
+            0.5
+        )
+        *
+        2.0;
+
+
+
+    float warped =
+
+        sign(centered)
+
+        *
+
+        pow(
+            abs(centered),
+            power
+        );
+
+
+
+    // convert back into 0 - 1
+
+    return
+
+        warped
+        *
+        0.5
+        +
+        0.5;
+
+}
+
+
+
+// ============================================================
+// MAIN
+// ============================================================
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / u_resolution.xy;  
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-    vec2 normouse = u_mouse.xy / u_resolution.xy;
-    
 
-    vec4 previous = texture2D(u_previousFrame, uv);
-    // Slightly fade the previous frame.
-    vec4 feedback = previous.rgba;
+    vec2 uv =
 
-  
-    vec2 mouse = u_mouse / u_resolution.xy;
+        gl_FragCoord.xy
 
-    float gx = st.x < mouse.x ? 1.0 : 3.0 - log(0.5*u_mouse.y/1.);
-    float gy = st.y < mouse.y ? 1.0 : 3.0 - log(0.5*u_mouse.y/1.);
+        /
 
-    vec2 pos = st * vec2(gx, gy) * 3.808;
-    float n = noise(pos);
-
-    vec4 grid = vec4(vec3(n), 1.0);
+        u_resolution.xy;
 
 
-    vec4 color = mix(grid, feedback, 0.960);
+
+    // ========================================================
+    // DISPLAY BUFFER DIRECTLY
+    // ========================================================
+
+    if (
+        u_display > 0.5
+    ) {
+
+        gl_FragColor =
+
+            texture2D(
+                u_previousFrame,
+                uv
+            );
+
+        return;
+
+    }
 
 
-gl_FragColor = color;
+
+    vec2 st =
+        uv;
+
+
+
+    vec2 mouse =
+
+        u_mouse
+
+        /
+
+        u_resolution.xy;
+
+
+
+    // ========================================================
+    // PREVIOUS FRAME
+    // ========================================================
+
+    vec4 previous =
+
+        texture2D(
+            u_previousFrame,
+            uv
+        );
+
+
+    vec4 feedback =
+        previous;
+
+
+
+    // ========================================================
+    // MOUSE DISTANCE FROM CENTER
+    // ========================================================
+    //
+    // center:
+    //
+    // mouseDistance = 0
+    //
+    // edge:
+    //
+    // mouseDistance = 1
+    //
+    // ========================================================
+
+    vec2 mouseOffset =
+
+        abs(
+            mouse
+            -
+            vec2(0.5)
+        );
+
+
+
+    // use the furthest X/Y distance
+    // so moving horizontally OR vertically works
+
+    float mouseDistance =
+
+        max(
+            mouseOffset.x,
+            mouseOffset.y
+        )
+
+        *
+        2.0;
+
+
+
+    mouseDistance =
+
+        clamp(
+            mouseDistance,
+            0.0,
+            1.0
+        );
+
+
+
+    // make transition smoother
+
+    mouseDistance =
+
+        smoothstep(
+            0.0,
+            1.0,
+            mouseDistance
+        );
+
+
+
+    // ========================================================
+    // COMPRESSION
+    // ========================================================
+    //
+    // mouse in center:
+    //
+    // centerPower
+    //
+    //      BIG   ||||||   BIG
+    //            ||||||
+    //      BIG   ||||||   BIG
+    //
+    //
+    // mouse at outside:
+    //
+    // outsidePower
+    //
+    //      |||   BIG   |||
+    //      |||   BIG   |||
+    //      |||   BIG   |||
+    //
+    // ========================================================
+
+
+    // FIGURE 1
+    //
+    // lower number =
+    // stronger compression in center
+
+    float centerPower =
+        0.5;
+
+
+
+    // FIGURE 2
+    //
+    // higher number =
+    // stronger compression outside
+
+    float outsidePower =
+        5.0;
+
+
+
+    float power =
+
+        mix(
+            centerPower,
+            outsidePower,
+            mouseDistance
+        );
+
+
+
+    // ========================================================
+    // APPLY WARP TO BOTH X + Y
+    // ========================================================
+
+    vec2 compressedST;
+
+
+    compressedST.x =
+
+        compressAxis(
+            st.x,
+            power
+        );
+
+
+    compressedST.y =
+
+        compressAxis(
+            st.y,
+            power
+        );
+
+
+
+    // ========================================================
+    // ORIGINAL PATTERN
+    // ========================================================
+
+    vec2 pos =
+
+        compressedST
+
+        *
+
+        10.808;
+
+
+
+    float n =
+        noise(pos);
+
+
+
+    vec4 grid =
+
+        vec4(
+            vec3(n),
+            1.0
+        );
+
+
+
+    // ========================================================
+    // FEEDBACK
+    // ========================================================
+
+    vec4 color =
+
+        mix(
+            grid,
+            feedback,
+            0.960
+        );
+
+
+
+    gl_FragColor =
+        color;
+
 }
 
 `;
 
-function createShader(gl, type, source) {
 
-    const shader = gl.createShader(type);
 
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
+// ============================================================
+// CREATE SHADER
+// ============================================================
 
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+function createShader(
+    gl,
+    type,
+    source
+) {
+
+    const shader =
+        gl.createShader(type);
+
+
+    gl.shaderSource(
+        shader,
+        source
+    );
+
+
+    gl.compileShader(
+        shader
+    );
+
+
+    if (
+        !gl.getShaderParameter(
+            shader,
+            gl.COMPILE_STATUS
+        )
+    ) {
 
         console.error(
-            gl.getShaderInfoLog(shader)
+            gl.getShaderInfoLog(
+                shader
+            )
         );
 
-        gl.deleteShader(shader);
+        gl.deleteShader(
+            shader
+        );
 
         return null;
+
     }
 
+
     return shader;
+
 }
+
+
+
+// ============================================================
+// CREATE PROGRAM
+// ============================================================
 
 const vertexShader =
-    createShader(gl, gl.VERTEX_SHADER, vsSource);
+
+    createShader(
+        gl,
+        gl.VERTEX_SHADER,
+        vsSource
+    );
+
 
 const fragmentShader =
-    createShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
-const program = gl.createProgram();
+    createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        fsSource
+    );
 
-gl.attachShader(program, vertexShader);
-gl.attachShader(program, fragmentShader);
 
-gl.linkProgram(program);
+const program =
+    gl.createProgram();
 
-if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error(gl.getProgramInfoLog(program));
+
+gl.attachShader(
+    program,
+    vertexShader
+);
+
+
+gl.attachShader(
+    program,
+    fragmentShader
+);
+
+
+gl.linkProgram(
+    program
+);
+
+
+if (
+    !gl.getProgramParameter(
+        program,
+        gl.LINK_STATUS
+    )
+) {
+
+    console.error(
+        gl.getProgramInfoLog(
+            program
+        )
+    );
+
 }
 
-gl.useProgram(program);
 
-const positionBuffer = gl.createBuffer();
+gl.useProgram(
+    program
+);
+
+
+
+// ============================================================
+// FULLSCREEN RECTANGLE
+// ============================================================
+
+const positionBuffer =
+    gl.createBuffer();
+
 
 gl.bindBuffer(
     gl.ARRAY_BUFFER,
     positionBuffer
 );
 
-const positions = new Float32Array([
-    -1, -1,
-     1, -1,
-    -1,  1,
 
-    -1,  1,
-     1, -1,
-     1,  1
-]);
+const positions =
+
+    new Float32Array([
+
+        -1, -1,
+         1, -1,
+        -1,  1,
+
+        -1,  1,
+         1, -1,
+         1,  1
+
+    ]);
+
 
 gl.bufferData(
     gl.ARRAY_BUFFER,
@@ -221,72 +743,112 @@ gl.bufferData(
     gl.STATIC_DRAW
 );
 
+
+
 const positionLocation =
+
     gl.getAttribLocation(
         program,
         "a_position"
     );
 
+
 gl.enableVertexAttribArray(
     positionLocation
 );
 
+
 gl.vertexAttribPointer(
+
     positionLocation,
+
     2,
+
     gl.FLOAT,
+
     false,
+
     0,
+
     0
+
 );
 
+
+
+// ============================================================
+// UNIFORMS
+// ============================================================
+
 const resolutionLocation =
+
     gl.getUniformLocation(
         program,
         "u_resolution"
     );
 
-const timeLocation =
-    gl.getUniformLocation(
-        program,
-        "u_time"
-    );
 
 const mouseLocation =
+
     gl.getUniformLocation(
         program,
         "u_mouse"
     );
 
-// Added mouse down uniform location
-const mouseDownLocation =
+
+const timeLocation =
+
     gl.getUniformLocation(
         program,
-        "u_mousedown"
+        "u_time"
     );
 
+
 const previousFrameLocation =
+
     gl.getUniformLocation(
         program,
         "u_previousFrame"
     );
 
 
-// Feedback buffers
+const displayLocation =
 
-let bufferA = null;
-let bufferB = null;
+    gl.getUniformLocation(
+        program,
+        "u_display"
+    );
 
 
-// Create a texture + framebuffer pair.
-function createBuffer(width, height) {
 
-    const texture = gl.createTexture();
+// ============================================================
+// FEEDBACK BUFFERS
+// ============================================================
+
+let bufferA =
+    null;
+
+
+let bufferB =
+    null;
+
+
+
+function createBuffer(
+    width,
+    height
+) {
+
+    const texture =
+        gl.createTexture();
+
 
     gl.bindTexture(
         gl.TEXTURE_2D,
         texture
     );
+
+
 
     gl.texParameteri(
         gl.TEXTURE_2D,
@@ -294,11 +856,13 @@ function createBuffer(width, height) {
         gl.LINEAR
     );
 
+
     gl.texParameteri(
         gl.TEXTURE_2D,
         gl.TEXTURE_MAG_FILTER,
         gl.LINEAR
     );
+
 
     gl.texParameteri(
         gl.TEXTURE_2D,
@@ -306,60 +870,90 @@ function createBuffer(width, height) {
         gl.CLAMP_TO_EDGE
     );
 
+
     gl.texParameteri(
         gl.TEXTURE_2D,
         gl.TEXTURE_WRAP_T,
         gl.CLAMP_TO_EDGE
     );
 
-    // Allocate texture storage.
+
+
     gl.texImage2D(
+
         gl.TEXTURE_2D,
+
         0,
+
         gl.RGBA,
+
         width,
         height,
+
         0,
+
         gl.RGBA,
+
         gl.UNSIGNED_BYTE,
+
         null
+
     );
+
 
 
     const framebuffer =
         gl.createFramebuffer();
+
 
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         framebuffer
     );
 
+
     gl.framebufferTexture2D(
+
         gl.FRAMEBUFFER,
+
         gl.COLOR_ATTACHMENT0,
+
         gl.TEXTURE_2D,
+
         texture,
+
         0
+
     );
 
 
+
     const status =
+
         gl.checkFramebufferStatus(
             gl.FRAMEBUFFER
         );
 
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+
+    if (
+        status !==
+        gl.FRAMEBUFFER_COMPLETE
+    ) {
+
         console.error(
             "Framebuffer incomplete:",
             status
         );
+
     }
+
 
 
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         null
     );
+
 
     gl.bindTexture(
         gl.TEXTURE_2D,
@@ -367,87 +961,165 @@ function createBuffer(width, height) {
     );
 
 
+
     return {
+
         framebuffer,
+
         texture
+
     };
+
 }
 
 
-// Recreate both buffers after resizing.
+
+// ============================================================
+// CREATE / RESET FEEDBACK
+// ============================================================
+
 function createFeedbackBuffers() {
 
     if (bufferA) {
-        gl.deleteFramebuffer(bufferA.framebuffer);
-        gl.deleteTexture(bufferA.texture);
 
-        gl.deleteFramebuffer(bufferB.framebuffer);
-        gl.deleteTexture(bufferB.texture);
+        gl.deleteFramebuffer(
+            bufferA.framebuffer
+        );
+
+
+        gl.deleteTexture(
+            bufferA.texture
+        );
+
+
+        gl.deleteFramebuffer(
+            bufferB.framebuffer
+        );
+
+
+        gl.deleteTexture(
+            bufferB.texture
+        );
+
     }
 
+
+
     bufferA =
+
         createBuffer(
             canvas.width,
             canvas.height
         );
+
 
     bufferB =
+
         createBuffer(
             canvas.width,
             canvas.height
         );
 
 
-    // Clear both buffers to black.
+
+    // clear buffer A
+
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         bufferA.framebuffer
     );
 
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
 
+    gl.clearColor(
+        0,
+        0,
+        0,
+        1
+    );
+
+
+    gl.clear(
+        gl.COLOR_BUFFER_BIT
+    );
+
+
+
+    // clear buffer B
 
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         bufferB.framebuffer
     );
 
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.clearColor(
+        0,
+        0,
+        0,
+        1
+    );
+
+
+    gl.clear(
+        gl.COLOR_BUFFER_BIT
+    );
+
 
 
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         null
     );
+
 }
 
 
-// Initial buffers.
-resize();
+
+// ============================================================
+// RESIZE
+// ============================================================
+
+function resize() {
+
+    const dpr =
+
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
 
 
-// ------------------------------------------------------------
-// Render loop
-// ------------------------------------------------------------
+    canvas.width =
 
-let startTime = performance.now();
-
-function render() {
-
-    const currentTime =
-        (performance.now() - startTime) * 0.001;
+        Math.floor(
+            window.innerWidth
+            *
+            dpr
+        );
 
 
-    // --------------------------------------------------------
-    // 1. Render into bufferB
-    // --------------------------------------------------------
+    canvas.height =
 
-    gl.bindFramebuffer(
-        gl.FRAMEBUFFER,
-        bufferB.framebuffer
-    );
+        Math.floor(
+            window.innerHeight
+            *
+            dpr
+        );
+
+
+    canvas.style.width =
+
+        window.innerWidth
+        +
+        "px";
+
+
+    canvas.style.height =
+
+        window.innerHeight
+        +
+        "px";
+
 
     gl.viewport(
         0,
@@ -457,66 +1129,187 @@ function render() {
     );
 
 
-    // Pass uniforms.
-    gl.uniform2f(
-        resolutionLocation,
+    createFeedbackBuffers();
+
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+resize();
+
+
+
+// ============================================================
+// RENDER
+// ============================================================
+
+const startTime =
+    performance.now();
+
+
+
+function render() {
+
+    const currentTime =
+
+        (
+            performance.now()
+            -
+            startTime
+        )
+
+        *
+        0.001;
+
+
+
+    // ========================================================
+    // CSS MOUSE → PHYSICAL PIXELS
+    // ========================================================
+
+    const mouseScaleX =
+
+        canvas.width
+        /
+        window.innerWidth;
+
+
+    const mouseScaleY =
+
+        canvas.height
+        /
+        window.innerHeight;
+
+
+
+    const actualMouseX =
+
+        mouse.x
+        *
+        mouseScaleX;
+
+
+    const actualMouseY =
+
+        mouse.y
+        *
+        mouseScaleY;
+
+
+
+    // ========================================================
+    // PASS 1
+    //
+    // generate new frame into bufferB
+    // ========================================================
+
+    gl.bindFramebuffer(
+        gl.FRAMEBUFFER,
+        bufferB.framebuffer
+    );
+
+
+    gl.viewport(
+        0,
+        0,
         canvas.width,
         canvas.height
     );
 
-    gl.uniform1f(
-        timeLocation,
-        currentTime
-    );
+
 
     gl.uniform2f(
+
+        resolutionLocation,
+
+        canvas.width,
+
+        canvas.height
+
+    );
+
+
+    gl.uniform2f(
+
         mouseLocation,
-        mouse.x,
-        mouse.y
+
+        actualMouseX,
+
+        actualMouseY
+
     );
 
-    // Pass mouse down state to uniform.
+
     gl.uniform1f(
-        mouseDownLocation,
-        mouse.down
+
+        timeLocation,
+
+        currentTime
+
     );
 
 
-    // --------------------------------------------------------
-    // Give the shader bufferA (previous frame)
-    // --------------------------------------------------------
+    gl.uniform1f(
+
+        displayLocation,
+
+        0.0
+
+    );
+
+
+
+    // previous frame
 
     gl.activeTexture(
         gl.TEXTURE0
     );
+
 
     gl.bindTexture(
         gl.TEXTURE_2D,
         bufferA.texture
     );
 
+
     gl.uniform1i(
+
         previousFrameLocation,
+
         0
+
     );
 
 
-    // Draw shader into bufferB.
+
     gl.drawArrays(
+
         gl.TRIANGLES,
+
         0,
+
         6
+
     );
 
 
-    // --------------------------------------------------------
-    // 2. Display bufferB on the screen
-    // --------------------------------------------------------
+
+    // ========================================================
+    // PASS 2
+    //
+    // show bufferB
+    // ========================================================
 
     gl.bindFramebuffer(
         gl.FRAMEBUFFER,
         null
     );
+
 
     gl.viewport(
         0,
@@ -526,35 +1319,61 @@ function render() {
     );
 
 
-    // Copy bufferB to the screen.
+    gl.uniform1f(
+
+        displayLocation,
+
+        1.0
+
+    );
+
+
     gl.bindTexture(
         gl.TEXTURE_2D,
         bufferB.texture
     );
 
+
     gl.drawArrays(
+
         gl.TRIANGLES,
+
         0,
+
         6
+
     );
 
 
-    // --------------------------------------------------------
-    // 3. Swap buffers
-    // --------------------------------------------------------
 
-    const temp = bufferA;
+    // ========================================================
+    // SWAP
+    // ========================================================
 
-    bufferA = bufferB;
-    bufferB = temp;
+    const temp =
+        bufferA;
 
 
-    requestAnimationFrame(render);
+    bufferA =
+        bufferB;
+
+
+    bufferB =
+        temp;
+
+
+
+    requestAnimationFrame(
+        render
+    );
+
 }
+
 
 render();
 
 </script>
 
 </body>
+
 </html>

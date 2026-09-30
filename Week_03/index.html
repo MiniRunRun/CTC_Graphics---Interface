@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motion Accumulation</title>
+
+  <script>
+    // We read pixels back every frame (video.loadPixels / loadPixels),
+    // so ask for CPU-backed 2D canvases. Must run before p5 creates any canvas.
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (type === '2d') {
+        attrs = Object.assign({ willReadFrequently: true }, attrs);
+      }
+      return origGetContext.call(this, type, attrs);
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.1/p5.min.js"></script>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      overflow: hidden;
+    }
+
+    /* Low-res canvas stretched to fill the window (same aspect ratio, so no distortion) */
+    canvas {
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+  </style>
+</head>
+
+<body>
+
+<script>
+let video;
+
+let prevPixels = [];
+
+// Trails fade out over this many milliseconds
+const FADE_TIME = 5000;
+let lastMotionTime; // per pixel: millis() when motion was last seen there
+
+let threshold = 20;
+
+let motionX = 0;
+let motionY = 0;
+
+let lerpX = 0;
+let lerpY = 0;
+
+// Processing resolution: height fixed, width follows the window's aspect ratio
+const PROC_H = 480;
+
+function procWidth() {
+  return round(PROC_H * windowWidth / windowHeight);
+}
+
+function setup() {
+  createCanvas(procWidth(), PROC_H);
+  background(255); // start white instead of transparent (black page showing through)
+
+  // Important so pixel array matches the canvas size exactly
+  pixelDensity(1);
+
+  // Create webcam
+  video = createCapture(VIDEO);
+  video.hide();
+
+  resetBuffers();
+}
+
+// Match video + buffers to the current canvas size
+function resetBuffers() {
+  video.size(width, height);
+  prevPixels = [];
+
+  // No motion anywhere yet
+  lastMotionTime = new Float64Array(width * height).fill(-Infinity);
+}
+
+function windowResized() {
+  resizeCanvas(procWidth(), PROC_H);
+  background(255);
+  resetBuffers();
+}
+
+function draw() {
+ 
+  video.loadPixels();
+
+
+ 
+  if (prevPixels.length === 0) {
+    prevPixels = new Uint8ClampedArray(video.pixels);
+    return;
+  }
+
+  loadPixels();
+
+  let now = millis();
+
+  let count = 0;
+  let avgX = 0;
+  let avgY = 0;
+
+  // Compare every pixel with previous frame
+  for (let x = 0; x < video.width; x++) {
+    for (let y = 0; y < video.height; y++) {
+
+      let loc = x + y * video.width;
+      let index = loc * 4;
+
+      // Current frame
+      let r1 = video.pixels[index];
+      let g1 = video.pixels[index + 1];
+      let b1 = video.pixels[index + 2];
+
+      // Previous frame
+      let r2 = prevPixels[index];
+      let g2 = prevPixels[index + 1];
+      let b2 = prevPixels[index + 2];
+
+      let d = distSq(
+        r1, g1, b1,
+        r2, g2, b2
+      );
+
+      // Motion detected
+      if (d > threshold * threshold) {
+
+        avgX += x;
+        avgY += y;
+        count++;
+
+        lastMotionTime[loc] = now;
+      }
+
+      let age = now - lastMotionTime[loc];
+
+      let v = age < FADE_TIME ? 0 : 255;
+      pixels[index] = v;
+      pixels[index + 1] = v;
+      pixels[index + 2] = v;
+      pixels[index + 3] = 255;
+    }
+  }
+
+  updatePixels();
+
+  if (count > 0) {
+    motionX = avgX / count;
+    motionY = avgY / count;
+  }
+
+  lerpX = lerp(lerpX, motionX, 0.1);
+  lerpY = lerp(lerpY, motionY, 0.1);
+
+  prevPixels = new Uint8ClampedArray(video.pixels);
+}
+
+
+function distSq(x1, y1, z1, x2, y2, z2) {
+  return (
+    (x2 - x1) * (x2 - x1) +
+    (y2 - y1) * (y2 - y1) +
+    (z2 - z1) * (z2 - z1)
+  );
+}
+</script>
+
+</body>
+</html>
