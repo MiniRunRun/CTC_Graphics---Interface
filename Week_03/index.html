@@ -6,8 +6,7 @@
   <title>Motion Accumulation</title>
 
   <script>
-    // We read pixels back every frame (video.loadPixels / loadPixels),
-    // so ask for CPU-backed 2D canvases. Must run before p5 creates any canvas.
+  
     const origGetContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
       if (type === '2d') {
@@ -27,7 +26,6 @@
       overflow: hidden;
     }
 
-    /* Low-res canvas stretched to fill the window (same aspect ratio, so no distortion) */
     canvas {
       display: block;
       width: 100vw !important;
@@ -43,9 +41,8 @@ let video;
 
 let prevPixels = [];
 
-// Trails fade out over this many milliseconds
 const FADE_TIME = 5000;
-let lastMotionTime; // per pixel: millis() when motion was last seen there
+let lastMotionTime; 
 
 let threshold = 20;
 
@@ -55,7 +52,6 @@ let motionY = 0;
 let lerpX = 0;
 let lerpY = 0;
 
-// Processing resolution: height fixed, width follows the window's aspect ratio
 const PROC_H = 480;
 
 function procWidth() {
@@ -64,24 +60,21 @@ function procWidth() {
 
 function setup() {
   createCanvas(procWidth(), PROC_H);
-  background(255); // start white instead of transparent (black page showing through)
+  background(255); 
 
-  // Important so pixel array matches the canvas size exactly
   pixelDensity(1);
 
-  // Create webcam
+
   video = createCapture(VIDEO);
   video.hide();
 
   resetBuffers();
 }
 
-// Match video + buffers to the current canvas size
 function resetBuffers() {
   video.size(width, height);
   prevPixels = [];
 
-  // No motion anywhere yet
   lastMotionTime = new Float64Array(width * height).fill(-Infinity);
 }
 
