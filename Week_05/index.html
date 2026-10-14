@@ -1,1 +1,12 @@
 <video src="Untitled.m4v" controls width="1920"></video>
+
+<script>
+    const v = document.getElementById('clip');
+    v.addEventListener('timeupdate', () => {
+      if (v.currentTime >= 5) {
+        v.currentTime = 0;   // jump back to start
+        v.play();            // keep looping
+        // or use v.pause(); to just stop at 5s
+      }
+    });
+  </script>
