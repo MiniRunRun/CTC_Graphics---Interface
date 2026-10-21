@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>The Most Annoying Volume Button</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+
+    hr {
+      width: 300px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <p>The Most Annoying Volume Button</p>
+
+  <p>Volume: <b id="num">0</b>%</p>
+  <input type="range" id="slider" value="0" min="0" max="100" disabled>
+  <button id="play">Play</button>
+
+  <hr>
+
+  <p id="question"></p>
+  <canvas id="pic" width="200" height="60"></canvas>
+
+  <form id="form">
+    <input id="answer" autocomplete="off">
+    <button type="submit">Submit</button>
+  </form>
+
+  <p id="message"></p>
+
+
+  <script>
+    let volume = 0;
+    let answer = "";
+
+    let audio = new Audio("MAKABAKA.mp3");
+    audio.loop = true;
+
+    let playButton = document.getElementById("play");
+    let volumeNumber = document.getElementById("num");
+    let slider = document.getElementById("slider");
+    let question = document.getElementById("question");
+    let answerInput = document.getElementById("answer");
+    let form = document.getElementById("form");
+    let message = document.getElementById("message");
+
+    let canvas = document.getElementById("pic");
+    let ctx = canvas.getContext("2d");
+
+
+    // play 
+    playButton.onclick = function() {
+      audio.volume = volume / 100;
+      audio.play();
+    };
+
+
+    // change the volume
+    function changeVolume(newVolume) {
+      if (newVolume > 100) {
+        newVolume = 100;
+      }
+
+      if (newVolume < 0) {
+        newVolume = 0;
+      }
+
+      volume = newVolume;
+
+      volumeNumber.textContent = volume;
+      slider.value = volume;
+      audio.volume = volume / 100;
+    }
+
+
+    // make a new captcha
+    function newCaptcha() {
+      ctx.clearRect(0, 0, 200, 60);
+      answerInput.value = "";
+
+      let random = Math.random();
+
+      if (random < 0.5) {
+
+        // math question
+        let a = Math.ceil(Math.random() * 12);
+        let b = Math.ceil(Math.random() * 12);
+
+        answer = String(a * b);
+        question.textContent = "What is " + a + " × " + b + "?";
+
+      } else {
+
+        // random letters
+        answer = Math.random().toString(36).slice(2, 7);
+        question.textContent = "Type the text below:";
+
+        ctx.font = "32px serif";
+        ctx.fillStyle = "black";
+
+        for (let i = 0; i < answer.length; i++) {
+          let letter = answer[i];
+
+          ctx.save();
+
+          ctx.translate(20 + i * 35, 42);
+          ctx.rotate(Math.random() - 0.5);
+          ctx.fillText(letter, 0, 0);
+
+          ctx.restore();
+        }
+      }
+    }
+
+
+    // check the answer
+    form.onsubmit = function(event) {
+      event.preventDefault();
+
+      let userAnswer = answerInput.value.trim();
+
+      if (userAnswer === answer) {
+        changeVolume(volume + 1);
+      } else {
+        changeVolume(volume - 1);
+      }
+
+      newCaptcha();
+    };
+
+
+    // start with a captcha
+    newCaptcha();
+
+  </script>
+
+</body>
+</html>
