@@ -96,7 +96,7 @@ float shape2(vec2 st){
 
     float f = abs(cos(a* 12.0) * sin((a +u_time) * 2.000)) * 1.504 + 0.1;
 
-    // 生成第二个 shape 的 mask
+    // 第二个 shape 的 mask
     return 0.104 - smoothstep(f, f +0.188, r);
 }
 
@@ -108,7 +108,7 @@ float shape3(vec2 st){
 
     float f = abs(cos(a* 12.112) * sin((a +u_time) * 2.744)) * 3.432 + 0.1;
 
-    // 生成第二个 shape 的 mask
+    // 第二个 shape 的 mask
     return 0.552 - smoothstep(f, f + 1.492, r);
 }
 

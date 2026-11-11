@@ -1,0 +1,61 @@
+/* Page layout for Cat & Frog: canvas on top, each player's controls below it. */
+:root {
+  --bg: #f7f7f7;
+  --fg: #4a4a4a;
+  --cat: #c8661c;
+  --frog: #3f8f2f;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1e1e1e; --fg: #d6d6d6; --cat: #f0a35e; --frog: #8fd16f; }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  text-align: center;
+}
+/* Same pixel font as the text inside the game. */
+h1, h2 { font-family: "Press Start 2P", ui-monospace, monospace; font-weight: normal; }
+h1 { font-size: 20px; }
+h2 { font-size: 12px; margin: 0 0 8px; }
+canvas {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.controls section {
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  padding: 10px;
+}
+.controls p { margin: 4px 0; }
+.cat { color: var(--cat); }
+.frog { color: var(--frog); }
+.small { font-size: 12px; opacity: 0.85; }
+kbd {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+a { color: inherit; }
+.touch-note { display: none; font-weight: bold; }
+@media (pointer: coarse) {
+  .touch-note { display: block; }
+}
+@media (max-width: 520px) {
+  .controls { grid-template-columns: 1fr; }
+}

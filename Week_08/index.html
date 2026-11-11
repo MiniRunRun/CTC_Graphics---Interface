@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cat &amp; Frog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Cat &amp; Frog</h1>
+    <canvas id="game" aria-label="Cat and Frog two-player game"></canvas>
+    <div class="controls">
+      <section class="cat">
+        <h2>🐱 Cat</h2>
+        <p><kbd>A</kbd> <kbd>D</kbd> walk · <kbd>S</kbd> poop · <kbd>W</kbd> green poop</p>
+        <p class="small">Score when a poop is left long enough to stink (green: +2).
+          Green poop makes the frog dizzy for 1 second if it eats it. One every 5 seconds.</p>
+      </section>
+      <section class="frog">
+        <h2>🐸 Frog</h2>
+        <p><kbd>←</kbd> <kbd>→</kbd> hop · <kbd>↑</kbd> jump · <kbd>↓</kbd> tongue · <kbd>/</kbd> spit</p>
+        <p class="small">Fetch poop: 1 point from the grass, 2 if caught in the air.
+          Spit up at the cat: a hit makes the cat dizzy for 1 second.</p>
+      </section>
+    </div>
+    <p class="small">Two players on one keyboard. <kbd>Space</kbd> starts a 60-second round.</p>
+    <p class="touch-note">This game needs a keyboard.</p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
