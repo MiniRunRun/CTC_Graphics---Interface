@@ -11,25 +11,17 @@
 </head>
 <body>
   <main>
-    <h1>Cat &amp; Frog</h1>
     <canvas id="game" aria-label="Cat and Frog two-player game"></canvas>
-    <div class="controls">
-      <section class="cat">
-        <h2>🐱 Cat</h2>
-        <p><kbd>A</kbd> <kbd>D</kbd> walk · <kbd>S</kbd> poop · <kbd>W</kbd> green poop</p>
-        <p class="small">Score when a poop is left long enough to stink (green: +2).
-          Green poop makes the frog dizzy for 1 second if it eats it. One every 5 seconds.</p>
-      </section>
-      <section class="frog">
-        <h2>🐸 Frog</h2>
-        <p><kbd>←</kbd> <kbd>→</kbd> hop · <kbd>↑</kbd> jump · <kbd>↓</kbd> tongue · <kbd>/</kbd> spit</p>
-        <p class="small">Fetch poop: 1 point from the grass, 2 if caught in the air.
-          Spit up at the cat: a hit makes the cat dizzy for 1 second.</p>
-      </section>
-    </div>
-    <p class="small">Two players on one keyboard. <kbd>Space</kbd> starts a 60-second round.</p>
-    <p class="touch-note">This game needs a keyboard.</p>
   </main>
+  <!-- Small controls card, pinned to the bottom-left corner over the game. -->
+  <aside class="controls" aria-label="Controls">
+    <p class="cat">🐱 <kbd>A</kbd><kbd>D</kbd> walk · <kbd>S</kbd> poop · <kbd>W</kbd> green poop</p>
+    <p class="cat small">stink +1 · green stink +2 · green makes frog dizzy</p>
+    <p class="frog">🐸 <kbd>←</kbd><kbd>→</kbd> hop · <kbd>↑</kbd> jump · <kbd>↓</kbd> tongue · <kbd>/</kbd> spit</p>
+    <p class="frog small">grass +1 · air catch +2 · spit makes cat dizzy</p>
+    <p class="small"><kbd>Space</kbd> start · <kbd>F</kbd> fullscreen</p>
+    <p class="touch-note">This game needs a keyboard.</p>
+  </aside>
   <script src="game.js"></script>
 </body>
 </html>

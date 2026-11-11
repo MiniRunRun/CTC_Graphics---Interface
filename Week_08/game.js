@@ -83,8 +83,7 @@
   const ctx = canvas.getContext('2d');
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    const cssW = canvas.clientWidth;
-    canvas.style.height = (cssW * H) / W + 'px';
+    const cssW = canvas.clientWidth; // the CSS sizes the canvas to fill the window at 16:9
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(((cssW * H) / W) * dpr);
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
@@ -135,6 +134,15 @@
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   window.addEventListener('blur', () => keys.clear()); // avoid stuck keys when the window loses focus
+
+  // F toggles real fullscreen (hides the browser bars too).
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyF' || e.repeat) return;
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    } catch (err) { /* fullscreen not allowed here; the game still fills the window */ }
+  });
 
   // ---- Game state ----
   let state; // 'ready' | 'playing' | 'over'

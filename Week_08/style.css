@@ -1,61 +1,58 @@
-/* Page layout for Cat & Frog: canvas on top, each player's controls below it. */
+/* Page layout for Cat & Frog: the game fills the window, a small controls card sits bottom-left. */
 :root {
-  --bg: #f7f7f7;
-  --fg: #4a4a4a;
-  --cat: #c8661c;
-  --frog: #3f8f2f;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #1e1e1e; --fg: #d6d6d6; --cat: #f0a35e; --frog: #8fd16f; }
+  --bg: #222034;   /* same dark ink as the sprite outlines */
+  --fg: #ffffff;
+  --cat: #df7126;
+  --frog: #99e550;
 }
 * { box-sizing: border-box; }
-body {
+html, body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
   background: var(--bg);
   color: var(--fg);
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
+/* Center the canvas; it grows as big as the window allows while keeping its 16:9 shape. */
 main {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px 16px;
-  text-align: center;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-/* Same pixel font as the text inside the game. */
-h1, h2 { font-family: "Press Start 2P", ui-monospace, monospace; font-weight: normal; }
-h1 { font-size: 20px; }
-h2 { font-size: 12px; margin: 0 0 8px; }
 canvas {
   display: block;
-  width: 100%;
-  border-radius: 8px;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
   image-rendering: pixelated;
 }
 .controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 12px;
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  background: rgba(34, 32, 52, 0.75);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  opacity: 0.8;
+  pointer-events: none; /* never blocks the game */
 }
-.controls section {
-  border: 2px solid currentColor;
-  border-radius: 8px;
-  padding: 10px;
-}
-.controls p { margin: 4px 0; }
+.controls p { margin: 0; }
 .cat { color: var(--cat); }
 .frog { color: var(--frog); }
-.small { font-size: 12px; opacity: 0.85; }
+.small { font-size: 10px; opacity: 0.8; }
 kbd {
   border: 1px solid currentColor;
-  border-radius: 4px;
-  padding: 0 4px;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-right: 1px;
 }
-a { color: inherit; }
 .touch-note { display: none; font-weight: bold; }
 @media (pointer: coarse) {
   .touch-note { display: block; }
-}
-@media (max-width: 520px) {
-  .controls { grid-template-columns: 1fr; }
 }
